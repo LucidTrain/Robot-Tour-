@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Pathfinding Sim</title>
+    <style>
+        canvas {
+            border: 2px solid #333;
+            background-color: #f4f4f4;
+        }
+        .toolbar {
+            margin: 20px;
+        }
+        .toolbar button, .toolbar input {
+            margin-right: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Robot Pathfinding Simulation</h1>
+    <div class="toolbar">
+        <button onclick="setTool('obstacle')">Draw Obstacles</button>
+        <button onclick="setTool('start')">Set Start</button>
+        <button onclick="setTool('finish')">Set Finish</button>
+        <button onclick="setTool('bonus')">Place Bonus</button>
+        <button onclick="clearField()">Clear Field</button>
+        <button onclick="runSimulation()">Run Simulation</button>
+        <label>Speed: </label>
+        <input type="range" id="speedRange" min="1" max="10" value="5" />
+    </div>
+    <canvas id="simCanvas" width="600" height="400"></canvas>
+
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const gridSize = 20;
+        const rows = canvas.height / gridSize;
+        const cols = canvas.width / gridSize;
+        const grid = [];
+        let tool = 'obstacle';
+        let start = null;
+        let finish = null;
+        let bonuses = [];
+        let obstacles = [];
+        let isDrawing = false; // To track drawing state
+        let speed = 5;
+
+        // Initialize grid
+        for (let row = 0; row < rows; row++) {
+            const rowArr = [];
+            for (let col = 0; col < cols; col++) {
+                rowArr.push({
+                    x: col * gridSize,
+                    y: row * gridSize,
+                    type: 'empty', // empty, obstacle, start, finish, bonus
+                    f: 0, g: 0, h: 0, // For A* calculations
+                    parent: null
+                });
+            }
+            grid.push(rowArr);
+        }
+
+        // Draw grid on canvas
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const cell = grid[row][col];
+                    ctx.strokeStyle = '#ccc';
+                    ctx.strokeRect(cell.x, cell.y, gridSize, gridSize);
+
+                    if (cell.type === 'obstacle') {
+                        ctx.fillStyle = '#333';
+                        ctx.fillRect(cell.x, cell.y, gridSize, gridSize);
+                    } else if (cell.type === 'start') {
+                        ctx.fillStyle = 'green';
+                        ctx.fillRect(cell.x, cell.y, gridSize, gridSize);
+                    } else if (cell.type === 'finish') {
+                        ctx.fillStyle = 'red';
+                        ctx.fillRect(cell.x, cell.y, gridSize, gridSize);
+                    } else if (cell.type === 'bonus') {
+                        ctx.fillStyle = 'yellow';
+                        ctx.fillRect(cell.x, cell.y, gridSize, gridSize);
+                    }
+                }
+            }
+        }
+
+        function setTool(selectedTool) {
+            tool = selectedTool;
+        }
+
+        // Handle drawing/smooth drawing and clicks for obstacles, start, finish, bonus
+        canvas.addEventListener('mousedown', (event) => {
+            isDrawing = true;
+            handleCanvasClick(event);
+        });
+
+        canvas.addEventListener('mousemove', (event) => {
+            if (isDrawing && tool === 'obstacle') {
+                handleCanvasClick(event);
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
+
+        function handleCanvasClick(event) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            const col = Math.floor(mouseX / gridSize);
+            const row = Math.floor(mouseY / gridSize);
+
+            const cell = grid[row][col];
+
+            if (tool === 'obstacle') {
+                cell.type = 'obstacle';
+                obstacles.push(cell);
+            } else if (tool === 'start') {
+                if (start) start.type = 'empty';
+                cell.type = 'start';
+                start = cell;
+            } else if (tool === 'finish') {
+                if (finish) finish.type = 'empty';
+                cell.type = 'finish';
+                finish = cell;
+            } else if (tool === 'bonus') {
+                cell.type = 'bonus';
+                bonuses.push(cell);
+            }
+
+            drawGrid();
+        }
+
+        // Heuristic for A* algorithm: Manhattan distance
+        function heuristic(a, b) {
+            return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+        }
+
+        // A* pathfinding algorithm implementation
+        function aStar(startCell, finishCell) {
+            let openSet = [];
+            let closedSet = [];
+            let path = [];
+
+            openSet.push(startCell);
+
+            while (openSet.length > 0) {
+                let lowestIndex = 0;
+                for (let i = 0; i < openSet.length; i++) {
+                    if (openSet[i].f < openSet[lowestIndex].f) {
+                        lowestIndex = i;
+                    }
+                }
+
+                let current = openSet[lowestIndex];
+
+                if (current === finishCell) {
+                    // Reached the finish, backtrack to get the path
+                    let temp = current;
+                    path.push(temp);
+                    while (temp.parent) {
+                        path.push(temp.parent);
+                        temp = temp.parent;
+                    }
+                    return path.reverse();
+                }
+
+                // Remove current from openSet and add to closedSet
+                openSet = openSet.filter(item => item !== current);
+                closedSet.push(current);
+
+                let neighbors = getNeighbors(current);
+
+                for (let neighbor of neighbors) {
+                    if (closedSet.includes(neighbor) || neighbor.type === 'obstacle') {
+                        continue; // Ignore the neighbor which is already evaluated or is an obstacle
+                    }
+
+                    let tentativeG = current.g + 1; // Distance from start to neighbor
+
+                    let newPath = false;
+                    if (!openSet.includes(neighbor)) {
+                        newPath = true;
+                        neighbor.h = heuristic(neighbor, finishCell);
+                        openSet.push(neighbor);
+                    } else if (tentativeG < neighbor.g) {
+                        newPath = true;
+                    }
+
+                    if (newPath) {
+                        neighbor.g = tentativeG;
+                        neighbor.f = neighbor.g + neighbor.h;
+                        neighbor.parent = current;
+                    }
+                }
+            }
+
+            // No path found
+            return [];
+        }
+
+        // Get valid neighbors for A* algorithm
+        function getNeighbors(cell) {
+            let neighbors = [];
+            const col = cell.x / gridSize;
+            const row = cell.y / gridSize;
+
+            if (row > 0) neighbors.push(grid[row - 1][col]); // Up
+            if (row < rows - 1) neighbors.push(grid[row + 1][col]); // Down
+            if (col > 0) neighbors.push(grid[row][col - 1]); // Left
+            if (col < cols - 1) neighbors.push(grid[row][col + 1]); // Right
+
+            return neighbors;
+        }
+
+        // Run the simulation
+        function runSimulation() {
+            if (!start || !finish) {
+                alert('Place both a start and finish point');
+                return;
+            }
+
+            let path = aStar(start, finish);
+
+            if (path.length === 0) {
+                alert('No valid path found!');
+                return;
+            }
+
+            animatePath(path);
+        }
+
+        // Animate the robot following the path
+        function animatePath(path) {
+            let index = 0;
+            speed = document.getElementById("speedRange").value;
+
+            function animate() {
+                if (index < path.length) {
+                    drawGrid();
+                    ctx.fillStyle = 'blue';
+                    const cell = path[index];
+                    ctx.fillRect(cell.x, cell.y, gridSize, gridSize);
+                    index++;
+                    setTimeout(animate, 1000 / speed); // Control speed using setTimeout
+                }
+            }
+
+            animate();
+        }
+
+        // Clear the grid
+        function clearField() {
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    grid[row][col].type = 'empty';
+                }
+            }
+            start = null;
+            finish = null;
+            obstacles = [];
+            bonuses = [];
+            drawGrid();
+        }
+
+        drawGrid();
+    </script>
+</body>
+</html>
