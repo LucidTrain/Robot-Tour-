@@ -3,274 +3,400 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robot Pathfinding Sim</title>
+    <title>Robot Tour Simulation</title>
     <style>
-        canvas {
-            border: 2px solid #333;
-            background-color: #f4f4f4;
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            color: #333;
         }
-        .toolbar {
-            margin: 20px;
+        h1 {
+            color: #2196F3;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
-        .toolbar button, .toolbar input {
-            margin-right: 10px;
+        #game-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+        }
+        #controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        #grid {
+            display: grid;
+            gap: 1px;
+            background-color: #ccc;
+            border: 1px solid #999;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .cell:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+        .obstacle { background-color: #333; }
+        .start { background-color: #4CAF50; color: white; }
+        .finish { background-color: #F44336; color: white; }
+        .bonus { background-color: #FFC107; color: black; }
+        .path { background-color: #2196F3; color: white; }
+        button {
+            background-color: #2196F3;
+            border: none;
+            color: white;
             padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
             font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1976D2;
+        }
+        input[type="number"] {
+            width: 50px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #draw-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .draw-button {
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+        .active {
+            background-color: #45a049;
         }
     </style>
 </head>
 <body>
-    <h1>Robot Pathfinding Simulation</h1>
-    <div class="toolbar">
-        <button onclick="setTool('obstacle')">Draw Obstacles</button>
-        <button onclick="setTool('start')">Set Start</button>
-        <button onclick="setTool('finish')">Set Finish</button>
-        <button onclick="setTool('bonus')">Place Bonus</button>
-        <button onclick="clearField()">Clear Field</button>
-        <button onclick="runSimulation()">Run Simulation</button>
-        <label>Speed: </label>
-        <input type="range" id="speedRange" min="1" max="10" value="5" />
+    <h1>Robot Tour Simulation</h1>
+    <div id="game-container">
+        <div id="controls">
+            <label>
+                Grid Size:
+                <input type="number" id="grid-size" min="5" max="20" value="10">
+            </label>
+            <label>
+                Obstacle Density (%):
+                <input type="number" id="obstacle-density" min="0" max="40" value="20">
+            </label>
+            <label>
+                Number of Bonus Points:
+                <input type="number" id="bonus-points" min="0" max="5" value="3">
+            </label>
+            <label>
+                <input type="checkbox" id="prioritize-bonus">
+                Prioritize Bonus Points
+            </label>
+            <button id="generate">Generate New Field</button>
+            <button id="clear">Clear Field</button>
+            <button id="solve">Solve</button>
+            <div id="draw-controls">
+                <button class="draw-button" id="draw-obstacle">Draw Obstacle</button>
+                <button class="draw-button" id="draw-start">Set Start</button>
+                <button class="draw-button" id="draw-finish">Set Finish</button>
+                <button class="draw-button" id="draw-bonus">Add Bonus</button>
+            </div>
+        </div>
+        <div id="grid"></div>
     </div>
-    <canvas id="simCanvas" width="600" height="400"></canvas>
-
     <script>
-        const canvas = document.getElementById('simCanvas');
-        const ctx = canvas.getContext('2d');
-        const gridSize = 20;
-        const rows = canvas.height / gridSize;
-        const cols = canvas.width / gridSize;
-        const grid = [];
-        let tool = 'obstacle';
-        let start = null;
-        let finish = null;
-        let bonuses = [];
-        let obstacles = [];
-        let isDrawing = false; // To track drawing state
-        let speed = 5;
+        const grid = document.getElementById('grid');
+        const generateBtn = document.getElementById('generate');
+        const clearBtn = document.getElementById('clear');
+        const solveBtn = document.getElementById('solve');
+        const gridSizeInput = document.getElementById('grid-size');
+        const obstacleDensityInput = document.getElementById('obstacle-density');
+        const bonusPointsInput = document.getElementById('bonus-points');
+        const prioritizeBonusCheckbox = document.getElementById('prioritize-bonus');
+        const drawButtons = document.querySelectorAll('.draw-button');
 
-        // Initialize grid
-        for (let row = 0; row < rows; row++) {
-            const rowArr = [];
-            for (let col = 0; col < cols; col++) {
-                rowArr.push({
-                    x: col * gridSize,
-                    y: row * gridSize,
-                    type: 'empty', // empty, obstacle, start, finish, bonus
-                    f: 0, g: 0, h: 0, // For A* calculations
-                    parent: null
-                });
-            }
-            grid.push(rowArr);
-        }
+        let gridSize, obstacleDensity, bonusPoints;
+        let field, start, finish, bonuses;
+        let currentDrawMode = null;
 
-        // Draw grid on canvas
-        function drawGrid() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (let row = 0; row < rows; row++) {
-                for (let col = 0; col < cols; col++) {
-                    const cell = grid[row][col];
-                    ctx.strokeStyle = '#ccc';
-                    ctx.strokeRect(cell.x, cell.y, gridSize, gridSize);
+        function createGrid() {
+            gridSize = parseInt(gridSizeInput.value);
+            obstacleDensity = parseInt(obstacleDensityInput.value);
+            bonusPoints = parseInt(bonusPointsInput.value);
 
-                    if (cell.type === 'obstacle') {
-                        ctx.fillStyle = '#333';
-                        ctx.fillRect(cell.x, cell.y, gridSize, gridSize);
-                    } else if (cell.type === 'start') {
-                        ctx.fillStyle = 'green';
-                        ctx.fillRect(cell.x, cell.y, gridSize, gridSize);
-                    } else if (cell.type === 'finish') {
-                        ctx.fillStyle = 'red';
-                        ctx.fillRect(cell.x, cell.y, gridSize, gridSize);
-                    } else if (cell.type === 'bonus') {
-                        ctx.fillStyle = 'yellow';
-                        ctx.fillRect(cell.x, cell.y, gridSize, gridSize);
-                    }
-                }
-            }
-        }
+            grid.style.gridTemplateColumns = `repeat(${gridSize}, 30px)`;
+            grid.innerHTML = '';
 
-        function setTool(selectedTool) {
-            tool = selectedTool;
-        }
-
-        // Handle drawing/smooth drawing and clicks for obstacles, start, finish, bonus
-        canvas.addEventListener('mousedown', (event) => {
-            isDrawing = true;
-            handleCanvasClick(event);
-        });
-
-        canvas.addEventListener('mousemove', (event) => {
-            if (isDrawing && tool === 'obstacle') {
-                handleCanvasClick(event);
-            }
-        });
-
-        canvas.addEventListener('mouseup', () => {
-            isDrawing = false;
-        });
-
-        function handleCanvasClick(event) {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = event.clientX - rect.left;
-            const mouseY = event.clientY - rect.top;
-
-            const col = Math.floor(mouseX / gridSize);
-            const row = Math.floor(mouseY / gridSize);
-
-            const cell = grid[row][col];
-
-            if (tool === 'obstacle') {
-                cell.type = 'obstacle';
-                obstacles.push(cell);
-            } else if (tool === 'start') {
-                if (start) start.type = 'empty';
-                cell.type = 'start';
-                start = cell;
-            } else if (tool === 'finish') {
-                if (finish) finish.type = 'empty';
-                cell.type = 'finish';
-                finish = cell;
-            } else if (tool === 'bonus') {
-                cell.type = 'bonus';
-                bonuses.push(cell);
-            }
-
-            drawGrid();
-        }
-
-        // Heuristic for A* algorithm: Manhattan distance
-        function heuristic(a, b) {
-            return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
-        }
-
-        // A* pathfinding algorithm implementation
-        function aStar(startCell, finishCell) {
-            let openSet = [];
-            let closedSet = [];
-            let path = [];
-
-            openSet.push(startCell);
-
-            while (openSet.length > 0) {
-                let lowestIndex = 0;
-                for (let i = 0; i < openSet.length; i++) {
-                    if (openSet[i].f < openSet[lowestIndex].f) {
-                        lowestIndex = i;
-                    }
-                }
-
-                let current = openSet[lowestIndex];
-
-                if (current === finishCell) {
-                    // Reached the finish, backtrack to get the path
-                    let temp = current;
-                    path.push(temp);
-                    while (temp.parent) {
-                        path.push(temp.parent);
-                        temp = temp.parent;
-                    }
-                    return path.reverse();
-                }
-
-                // Remove current from openSet and add to closedSet
-                openSet = openSet.filter(item => item !== current);
-                closedSet.push(current);
-
-                let neighbors = getNeighbors(current);
-
-                for (let neighbor of neighbors) {
-                    if (closedSet.includes(neighbor) || neighbor.type === 'obstacle') {
-                        continue; // Ignore the neighbor which is already evaluated or is an obstacle
-                    }
-
-                    let tentativeG = current.g + 1; // Distance from start to neighbor
-
-                    let newPath = false;
-                    if (!openSet.includes(neighbor)) {
-                        newPath = true;
-                        neighbor.h = heuristic(neighbor, finishCell);
-                        openSet.push(neighbor);
-                    } else if (tentativeG < neighbor.g) {
-                        newPath = true;
-                    }
-
-                    if (newPath) {
-                        neighbor.g = tentativeG;
-                        neighbor.f = neighbor.g + neighbor.h;
-                        neighbor.parent = current;
-                    }
-                }
-            }
-
-            // No path found
-            return [];
-        }
-
-        // Get valid neighbors for A* algorithm
-        function getNeighbors(cell) {
-            let neighbors = [];
-            const col = cell.x / gridSize;
-            const row = cell.y / gridSize;
-
-            if (row > 0) neighbors.push(grid[row - 1][col]); // Up
-            if (row < rows - 1) neighbors.push(grid[row + 1][col]); // Down
-            if (col > 0) neighbors.push(grid[row][col - 1]); // Left
-            if (col < cols - 1) neighbors.push(grid[row][col + 1]); // Right
-
-            return neighbors;
-        }
-
-        // Run the simulation
-        function runSimulation() {
-            if (!start || !finish) {
-                alert('Place both a start and finish point');
-                return;
-            }
-
-            let path = aStar(start, finish);
-
-            if (path.length === 0) {
-                alert('No valid path found!');
-                return;
-            }
-
-            animatePath(path);
-        }
-
-        // Animate the robot following the path
-        function animatePath(path) {
-            let index = 0;
-            speed = document.getElementById("speedRange").value;
-
-            function animate() {
-                if (index < path.length) {
-                    drawGrid();
-                    ctx.fillStyle = 'blue';
-                    const cell = path[index];
-                    ctx.fillRect(cell.x, cell.y, gridSize, gridSize);
-                    index++;
-                    setTimeout(animate, 1000 / speed); // Control speed using setTimeout
-                }
-            }
-
-            animate();
-        }
-
-        // Clear the grid
-        function clearField() {
-            for (let row = 0; row < rows; row++) {
-                for (let col = 0; col < cols; col++) {
-                    grid[row][col].type = 'empty';
-                }
-            }
+            field = Array(gridSize).fill().map(() => Array(gridSize).fill(0));
             start = null;
             finish = null;
-            obstacles = [];
             bonuses = [];
-            drawGrid();
+
+            for (let y = 0; y < gridSize; y++) {
+                for (let x = 0; x < gridSize; x++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+                    cell.addEventListener('click', handleCellClick);
+                    grid.appendChild(cell);
+
+                    if (Math.random() * 100 < obstacleDensity) {
+                        field[y][x] = 1;
+                        cell.classList.add('obstacle');
+                    }
+                }
+            }
+
+            placeRandomPoints();
         }
 
-        drawGrid();
+        function placeRandomPoints() {
+            // Set start
+            do {
+                start = { x: Math.floor(Math.random() * gridSize), y: Math.floor(Math.random() * gridSize) };
+            } while (field[start.y][start.x] !== 0);
+            field[start.y][start.x] = 2;
+            grid.children[start.y * gridSize + start.x].classList.add('start');
+
+            // Set finish
+            do {
+                finish = { x: Math.floor(Math.random() * gridSize), y: Math.floor(Math.random() * gridSize) };
+            } while (field[finish.y][finish.x] !== 0);
+            field[finish.y][finish.x] = 3;
+            grid.children[finish.y * gridSize + finish.x].classList.add('finish');
+
+            // Set bonus points
+            for (let i = 0; i < bonusPoints; i++) {
+                let bonus;
+                do {
+                    bonus = { x: Math.floor(Math.random() * gridSize), y: Math.floor(Math.random() * gridSize) };
+                } while (field[bonus.y][bonus.x] !== 0);
+                field[bonus.y][bonus.x] = 4;
+                bonuses.push(bonus);
+                grid.children[bonus.y * gridSize + bonus.x].classList.add('bonus');
+            }
+        }
+
+        function clearField() {
+            grid.querySelectorAll('.cell').forEach(cell => {
+                cell.className = 'cell';
+            });
+            field = Array(gridSize).fill().map(() => Array(gridSize).fill(0));
+            start = null;
+            finish = null;
+            bonuses = [];
+        }
+
+        function solve() {
+            // Clear previous path
+            grid.querySelectorAll('.path').forEach(cell => cell.classList.remove('path'));
+
+            const prioritizeBonus = prioritizeBonusCheckbox.checked;
+            let path;
+
+            if (prioritizeBonus && bonuses.length > 0) {
+                path = findOptimalPathThroughBonuses();
+            } else {
+                path = findShortestPath(start, finish);
+            }
+
+            if (path) {
+                animatePath(path);
+            } else {
+                alert('No valid path found!');
+            }
+        }
+
+        function findOptimalPathThroughBonuses() {
+            let currentPosition = start;
+            let remainingBonuses = [...bonuses];
+            let totalPath = [];
+
+            while (remainingBonuses.length > 0) {
+                let nearestBonus = findNearestPoint(currentPosition, remainingBonuses);
+                let pathToBonus = findShortestPath(currentPosition, nearestBonus);
+                
+                if (!pathToBonus) return null; // No valid path found
+
+                totalPath = totalPath.concat(pathToBonus.slice(1)); // Exclude the starting point to avoid duplication
+                currentPosition = nearestBonus;
+                remainingBonuses = remainingBonuses.filter(b => b.x !== nearestBonus.x || b.y !== nearestBonus.y);
+            }
+
+            let finalPath = findShortestPath(currentPosition, finish);
+            if (!finalPath) return null; // No valid path found
+
+            return totalPath.concat(finalPath.slice(1)); // Exclude the starting point to avoid duplication
+        }
+
+        function findNearestPoint(start, points) {
+            let nearest = null;
+            let shortestDistance = Infinity;
+
+            for (let point of points) {
+                let distance = Math.abs(start.x - point.x) + Math.abs(start.y - point.y);
+                if (distance < shortestDistance) {
+                    shortestDistance = distance;
+                    nearest = point;
+                }
+            }
+
+            return nearest;
+        }
+
+        function findShortestPath(start, end) {
+            const queue = [[start]];
+            const visited = new Set();
+
+            while (queue.length > 0) {
+                const path = queue.shift();
+                const { x, y } = path[path.length - 1];
+
+                if (x === end.x && y === end.y) {
+                    return path;
+                }
+
+                if (!visited.has(`${x},${y}`)) {
+                    visited.add(`${x},${y}`);
+
+                    const neighbors = [
+                        { x: x + 1, y: y },
+                        { x: x - 1, y: y },
+                        { x: x, y: y + 1 },
+                        { x: x, y: y - 1 }
+                    ];
+
+                    for (let neighbor of neighbors) {
+                        if (
+                            neighbor.x >= 0 && neighbor.x < gridSize &&
+                            neighbor.y >= 0 && neighbor.y < gridSize &&
+                            field[neighbor.y][neighbor.x] !== 1 // Not an obstacle
+                        ) {
+                            queue.push([...path, neighbor]);
+                        }
+                    }
+                }
+            }
+
+            return null; // No path found
+        }
+
+        function animatePath(path) {
+            path.forEach((point, index) => {
+                setTimeout(() => {
+                    if (field[point.y][point.x] !== 2 && field[point.y][point.x] !== 3 && field[point.y][point.x] !== 4) {
+                        grid.children[point.y * gridSize + point.x].classList.add('path');
+                    }
+                }, index * 100);
+            });
+        }
+
+        function handleCellClick(event) {
+            const cell = event.target;
+            const x = parseInt(cell.dataset.x);
+            const y = parseInt(cell.dataset.y);
+
+            if (currentDrawMode === 'draw-obstacle') {
+                toggleObstacle(cell, x, y);
+            } else if (currentDrawMode === 'draw-start') {
+                setStart(cell, x, y);
+            } else if (currentDrawMode === 'draw-finish') {
+                setFinish(cell, x, y);
+            } else if (currentDrawMode === 'draw-bonus') {
+                toggleBonus(cell, x, y);
+            }
+        }
+
+        function toggleObstacle(cell, x, y) {
+            if (field[y][x] === 1) {
+                field[y][x] = 0;
+                cell.classList.remove('obstacle');
+            } else if (field[y][x] === 0) {
+                field[y][x] = 1;
+                cell.classList.add('obstacle');
+            }
+        }
+
+        function setStart(cell, x, y) {
+            if (start) {
+                grid.children[start.y * gridSize + start.x].classList.remove('start');
+                field[start.y][start.x] = 0;
+            }
+            start = { x, y };
+            field[y][x] = 2;
+            cell.className = 'cell start';
+        }
+
+        function setFinish(cell, x, y) {
+            if (finish) {
+                grid.children[finish.y * gridSize + finish.x].classList.remove('finish');
+                field[finish.y][finish.x] = 0;
+            }
+            finish = { x, y };
+            field[y][x] = 3;
+            cell.className = 'cell finish';
+        }
+
+        function toggleBonus(cell, x, y) {
+            if (field[y][x] === 4) {
+                field[y][x] = 0;
+                cell.classList.remove('bonus');
+                bonuses = bonuses.filter(b => b.x !== x || b.y !== y);
+            } else if (field[y][x] === 0) {
+                field[y][x] = 4;
+                cell.classList.add('bonus');
+                bonuses.push({ x, y });
+            }
+        }
+
+        generateBtn.addEventListener('click', createGrid);
+        clearBtn.addEventListener('click', clearField);
+        solveBtn.addEventListener('click', solve);
+
+        drawButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                drawButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                currentDrawMode = button.id;
+            });
+        });
+
+        createGrid(); // Initial grid creation
     </script>
 </body>
 </html>
