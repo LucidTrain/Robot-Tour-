@@ -179,10 +179,6 @@
                     cell.classList.add('cell');
                     cell.dataset.x = x;
                     cell.dataset.y = y;
-                    cell.addEventListener('mousedown', startDrawing);
-                    cell.addEventListener('mousemove', draw);
-                    cell.addEventListener('mouseup', stopDrawing);
-                    cell.addEventListener('mouseleave', stopDrawing);
                     grid.appendChild(cell);
 
                     if (Math.random() * 100 < obstacleDensity) {
@@ -342,7 +338,7 @@
         }
 
         function draw(event) {
-            if (!isDrawing && currentDrawMode !== 'draw-obstacle') return;
+            if (!isDrawing) return;
             const cell = event.target;
             const x = parseInt(cell.dataset.x);
             const y = parseInt(cell.dataset.y);
@@ -412,6 +408,11 @@
                 currentDrawMode = button.id;
             });
         });
+
+        grid.addEventListener('mousedown', startDrawing);
+        grid.addEventListener('mousemove', draw);
+        grid.addEventListener('mouseup', stopDrawing);
+        grid.addEventListener('mouseleave', stopDrawing);
 
         createGrid(); // Initial grid creation
     </script>
