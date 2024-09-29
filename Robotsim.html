@@ -111,8 +111,12 @@
     <div id="game-container">
         <div id="controls">
             <label>
-                Grid Size:
-                <input type="number" id="grid-size" min="5" max="20" value="10">
+                Grid Width:
+                <input type="number" id="grid-width" min="5" max="30" value="10">
+            </label>
+            <label>
+                Grid Height:
+                <input type="number" id="grid-height" min="5" max="30" value="10">
             </label>
             <label>
                 Obstacle Density (%):
@@ -143,36 +147,42 @@
         const generateBtn = document.getElementById('generate');
         const clearBtn = document.getElementById('clear');
         const solveBtn = document.getElementById('solve');
-        const gridSizeInput = document.getElementById('grid-size');
+        const gridWidthInput = document.getElementById('grid-width');
+        const gridHeightInput = document.getElementById('grid-height');
         const obstacleDensityInput = document.getElementById('obstacle-density');
         const bonusPointsInput = document.getElementById('bonus-points');
         const prioritizeBonusCheckbox = document.getElementById('prioritize-bonus');
         const drawButtons = document.querySelectorAll('.draw-button');
 
-        let gridSize, obstacleDensity, bonusPoints;
+        let gridWidth, gridHeight, obstacleDensity, bonusPoints;
         let field, start, finish, bonuses;
         let currentDrawMode = null;
+        let isDrawing = false;
 
         function createGrid() {
-            gridSize = parseInt(gridSizeInput.value);
+            gridWidth = parseInt(gridWidthInput.value);
+            gridHeight = parseInt(gridHeightInput.value);
             obstacleDensity = parseInt(obstacleDensityInput.value);
             bonusPoints = parseInt(bonusPointsInput.value);
 
-            grid.style.gridTemplateColumns = `repeat(${gridSize}, 30px)`;
+            grid.style.gridTemplateColumns = `repeat(${gridWidth}, 30px)`;
             grid.innerHTML = '';
 
-            field = Array(gridSize).fill().map(() => Array(gridSize).fill(0));
+            field = Array(gridHeight).fill().map(() => Array(gridWidth).fill(0));
             start = null;
             finish = null;
             bonuses = [];
 
-            for (let y = 0; y < gridSize; y++) {
-                for (let x = 0; x < gridSize; x++) {
+            for (let y = 0; y < gridHeight; y++) {
+                for (let x = 0; x < gridWidth; x++) {
                     const cell = document.createElement('div');
                     cell.classList.add('cell');
                     cell.dataset.x = x;
                     cell.dataset.y = y;
-                    cell.addEventListener('click', handleCellClick);
+                    cell.addEventListener('mousedown', startDrawing);
+                    cell.addEventListener('mousemove', draw);
+                    cell.addEventListener('mouseup', stopDrawing);
+                    cell.addEventListener('mouseleave', stopDrawing);
                     grid.appendChild(cell);
 
                     if (Math.random() * 100 < obstacleDensity) {
@@ -188,27 +198,27 @@
         function placeRandomPoints() {
             // Set start
             do {
-                start = { x: Math.floor(Math.random() * gridSize), y: Math.floor(Math.random() * gridSize) };
+                start = { x: Math.floor(Math.random() * gridWidth), y: Math.floor(Math.random() * gridHeight) };
             } while (field[start.y][start.x] !== 0);
             field[start.y][start.x] = 2;
-            grid.children[start.y * gridSize + start.x].classList.add('start');
+            grid.children[start.y * gridWidth + start.x].classList.add('start');
 
             // Set finish
             do {
-                finish = { x: Math.floor(Math.random() * gridSize), y: Math.floor(Math.random() * gridSize) };
+                finish = { x: Math.floor(Math.random() * gridWidth), y: Math.floor(Math.random() * gridHeight) };
             } while (field[finish.y][finish.x] !== 0);
             field[finish.y][finish.x] = 3;
-            grid.children[finish.y * gridSize + finish.x].classList.add('finish');
+            grid.children[finish.y * gridWidth + finish.x].classList.add('finish');
 
             // Set bonus points
             for (let i = 0; i < bonusPoints; i++) {
                 let bonus;
                 do {
-                    bonus = { x: Math.floor(Math.random() * gridSize), y: Math.floor(Math.random() * gridSize) };
+                    bonus = { x: Math.floor(Math.random() * gridWidth), y: Math.floor(Math.random() * gridHeight) };
                 } while (field[bonus.y][bonus.x] !== 0);
                 field[bonus.y][bonus.x] = 4;
                 bonuses.push(bonus);
-                grid.children[bonus.y * gridSize + bonus.x].classList.add('bonus');
+                grid.children[bonus.y * gridWidth + bonus.x].classList.add('bonus');
             }
         }
 
@@ -216,7 +226,7 @@
             grid.querySelectorAll('.cell').forEach(cell => {
                 cell.className = 'cell';
             });
-            field = Array(gridSize).fill().map(() => Array(gridSize).fill(0));
+            field = Array(gridHeight).fill().map(() => Array(gridWidth).fill(0));
             start = null;
             finish = null;
             bonuses = [];
@@ -303,8 +313,8 @@
 
                     for (let neighbor of neighbors) {
                         if (
-                            neighbor.x >= 0 && neighbor.x < gridSize &&
-                            neighbor.y >= 0 && neighbor.y < gridSize &&
+                            neighbor.x >= 0 && neighbor.x < gridWidth &&
+                            neighbor.y >= 0 && neighbor.y < gridHeight &&
                             field[neighbor.y][neighbor.x] !== 1 // Not an obstacle
                         ) {
                             queue.push([...path, neighbor]);
@@ -320,19 +330,25 @@
             path.forEach((point, index) => {
                 setTimeout(() => {
                     if (field[point.y][point.x] !== 2 && field[point.y][point.x] !== 3 && field[point.y][point.x] !== 4) {
-                        grid.children[point.y * gridSize + point.x].classList.add('path');
+                        grid.children[point.y * gridWidth + point.x].classList.add('path');
                     }
                 }, index * 100);
             });
         }
 
-        function handleCellClick(event) {
+        function startDrawing(event) {
+            isDrawing = true;
+            draw(event);
+        }
+
+        function draw(event) {
+            if (!isDrawing && currentDrawMode !== 'draw-obstacle') return;
             const cell = event.target;
             const x = parseInt(cell.dataset.x);
             const y = parseInt(cell.dataset.y);
 
             if (currentDrawMode === 'draw-obstacle') {
-                toggleObstacle(cell, x, y);
+                setObstacle(cell, x, y);
             } else if (currentDrawMode === 'draw-start') {
                 setStart(cell, x, y);
             } else if (currentDrawMode === 'draw-finish') {
@@ -342,11 +358,12 @@
             }
         }
 
-        function toggleObstacle(cell, x, y) {
-            if (field[y][x] === 1) {
-                field[y][x] = 0;
-                cell.classList.remove('obstacle');
-            } else if (field[y][x] === 0) {
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function setObstacle(cell, x, y) {
+            if (field[y][x] !== 1) {
                 field[y][x] = 1;
                 cell.classList.add('obstacle');
             }
@@ -354,7 +371,7 @@
 
         function setStart(cell, x, y) {
             if (start) {
-                grid.children[start.y * gridSize + start.x].classList.remove('start');
+                grid.children[start.y * gridWidth + start.x].classList.remove('start');
                 field[start.y][start.x] = 0;
             }
             start = { x, y };
@@ -364,7 +381,7 @@
 
         function setFinish(cell, x, y) {
             if (finish) {
-                grid.children[finish.y * gridSize + finish.x].classList.remove('finish');
+                grid.children[finish.y * gridWidth + finish.x].classList.remove('finish');
                 field[finish.y][finish.x] = 0;
             }
             finish = { x, y };
