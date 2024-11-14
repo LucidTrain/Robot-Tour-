@@ -22,7 +22,8 @@ analogWrite(6, 255);
 }
 
 void loop() {
-forward(5000, 100);
+  //to go 50cm do forward(1567, 255);
+forward(1567, 255);
 
 }
 
