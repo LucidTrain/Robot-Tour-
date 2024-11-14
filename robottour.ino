@@ -22,25 +22,8 @@ analogWrite(6, 255);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-
 forward(5000, 100);
-delay(5000);
-  left(150, 255);
-  delay(5000);
-  right(150, 200);
-  delay(5000);
-  backward(2000, 123);
-  delay(5000);
-  stop();
-  //backward();
-  //  Serial.println("Backward");
-  //left();
-    //Serial.println("Left");
-  //right();
-    //Serial.println("Right");
-  //stop();
-    //Serial.println("Stop");
+
 }
 
 void forward(int delay2, int speed){
