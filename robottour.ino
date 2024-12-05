@@ -43,40 +43,46 @@ void setup()
   // Reset slot counters
   resetCounters();
  
-  delay(5000);
  
   // Attach interrupts if your sensors can trigger on state change
   attachInterrupt(digitalPinToInterrupt(SensorLeft), leftSensorInterrupt, CHANGE); // Assuming A0 for left wheel
   attachInterrupt(digitalPinToInterrupt(SensorRight), rightSensorInterrupt, CHANGE); // Assuming A1 for right wheel
- 
+ delay(5000);
 }
  
 void loop()
 {
-  forward2(1,200);
-  forward2(1,200);
-  forward2(1,200);
-  forward2(1,200);
-  forward2(1,200);
-  forward2(1,200);
-  forward2(1,200);
-  forward2(1,200);
-  forward2(1,100);
+  //use 28 for left/right turn 
+  //use stop(); then delay(200); before executing any turn command
+  // use 88 for going 50cm straight
+  forward2(88,255);
+  stop();
+  delay(200);
+ //left2(28, 255);
+
+  //forward2(1,200);
+  //forward2(1,200);
+  //forward2(1,200);
+  //forward2(1,200);
+  //forward2(1,200);
+  //forward2(1,200);
+  //forward2(1,200);
+  //forward2(1,100);
  
   
    
-  delay(500);
-  left3(1,200);
-  forward2(1,200);
-  forward2(1,200);
-  forward2(1,100);
-  delay(1000);
-  right3(1,200);
-  forward2(1,200);
-  forward2(1,200);
-  left3(1,200);
-  forward2(1,200);
-  forward2(1,200);
+  //delay(500);
+  //left3(1,200);
+  //forward2(1,200);
+  //forward2(1,200);
+  //forward2(1,100);
+  //delay(1000);
+  //right3(1,200);
+  //forward2(1,200);
+  //forward2(1,200);
+  //left3(1,200);
+  //forward2(1,200);
+  //forward2(1,200);
  
  
  
@@ -140,16 +146,16 @@ void forward2(int turns, int speed)
   digitalWrite(IN2_PIN, LOW);
  
   // Wait for both wheels to complete one rotation
-  while (leftCounter < 30 || rightCounter < 30)
+  while (leftCounter < turns || rightCounter < turns)
   {
     // If left wheel has completed its rotation, stop it
-    if (leftCounter >= 30) {
+    if (leftCounter >= turns) {
       digitalWrite(IN1_PIN, LOW);
       analogWrite(ENA_PIN, 0);
     }
    
     // If right wheel has completed its rotation, stop it
-    if (rightCounter >= 30) {
+    if (rightCounter >= turns) {
       digitalWrite(IN3_PIN, LOW);
       analogWrite(ENB_PIN, 0);
     }
@@ -204,9 +210,9 @@ void left2(int turns, int speed)
   digitalWrite(IN2_PIN, LOW);
  
 // If right wheel has completed its rotation, stop it
-  while (rightCounter < 27)
+  while (rightCounter < turns)
   {
-    if (rightCounter >= 27)
+    if (rightCounter >= turns)
     {
       digitalWrite(IN3_PIN, LOW);
       analogWrite(ENB_PIN, 0);
@@ -264,9 +270,9 @@ void right2(int turns, int speed)
   digitalWrite(IN2_PIN, LOW);
  
 // If left wheel has completed its rotation, stop it
-  while (leftCounter < 27)
+  while (leftCounter < turns)
   {
-    if (leftCounter >= 27)
+    if (leftCounter >= turns)
     {
       digitalWrite(IN1_PIN, LOW);
       analogWrite(ENA_PIN, 0);
