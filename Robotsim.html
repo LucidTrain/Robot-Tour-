@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Tour Simulation</title>
+    <style>
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            color: #2196F3;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        #game-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+        }
+        #controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        #grid {
+            display: grid;
+            gap: 1px;
+            background-color: #ccc;
+            border: 1px solid #999;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            background-color: #fff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .cell:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+        .obstacle { background-color: #333; }
+        .start { background-color: #4CAF50; color: white; }
+        .finish { background-color: #F44336; color: white; }
+        .bonus { background-color: #FFC107; color: black; }
+        .path { background-color: #2196F3; color: white; }
+        button {
+            background-color: #2196F3;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1976D2;
+        }
+        input[type="number"] {
+            width: 50px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #draw-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .draw-button {
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+        .active {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Robot Tour Simulation</h1>
+    <div id="game-container">
+        <div id="controls">
+            <label>
+                Grid Width:
+                <input type="number" id="grid-width" min="5" max="30" value="10">
+            </label>
+            <label>
+                Grid Height:
+                <input type="number" id="grid-height" min="5" max="30" value="10">
+            </label>
+            <label>
+                Obstacle Density (%):
+                <input type="number" id="obstacle-density" min="0" max="40" value="20">
+            </label>
+            <label>
+                Number of Bonus Points:
+                <input type="number" id="bonus-points" min="0" max="5" value="3">
+            </label>
+            <label>
+                <input type="checkbox" id="prioritize-bonus">
+                Prioritize Bonus Points
+            </label>
+            <button id="generate">Generate New Field</button>
+            <button id="clear">Clear Field</button>
+            <button id="solve">Solve</button>
+            <div id="draw-controls">
+                <button class="draw-button" id="draw-obstacle">Draw Obstacle</button>
+                <button class="draw-button" id="draw-start">Set Start</button>
+                <button class="draw-button" id="draw-finish">Set Finish</button>
+                <button class="draw-button" id="draw-bonus">Add Bonus</button>
+            </div>
+        </div>
+        <div id="grid"></div>
+    </div>
+    <script>
+        const grid = document.getElementById('grid');
+        const generateBtn = document.getElementById('generate');
+        const clearBtn = document.getElementById('clear');
+        const solveBtn = document.getElementById('solve');
+        const gridWidthInput = document.getElementById('grid-width');
+        const gridHeightInput = document.getElementById('grid-height');
+        const obstacleDensityInput = document.getElementById('obstacle-density');
+        const bonusPointsInput = document.getElementById('bonus-points');
+        const prioritizeBonusCheckbox = document.getElementById('prioritize-bonus');
+        const drawButtons = document.querySelectorAll('.draw-button');
+
+        let gridWidth, gridHeight, obstacleDensity, bonusPoints;
+        let field, start, finish, bonuses;
+        let currentDrawMode = null;
+        let isDrawing = false;
+
+        function createGrid() {
+            gridWidth = parseInt(gridWidthInput.value);
+            gridHeight = parseInt(gridHeightInput.value);
+            obstacleDensity = parseInt(obstacleDensityInput.value);
+            bonusPoints = parseInt(bonusPointsInput.value);
+
+            grid.style.gridTemplateColumns = `repeat(${gridWidth}, 30px)`;
+            grid.innerHTML = '';
+
+            field = Array(gridHeight).fill().map(() => Array(gridWidth).fill(0));
+            start = null;
+            finish = null;
+            bonuses = [];
+
+            for (let y = 0; y < gridHeight; y++) {
+                for (let x = 0; x < gridWidth; x++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell');
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+                    grid.appendChild(cell);
+
+                    if (Math.random() * 100 < obstacleDensity) {
+                        field[y][x] = 1;
+                        cell.classList.add('obstacle');
+                    }
+                }
+            }
+
+            placeRandomPoints();
+        }
+
+        function placeRandomPoints() {
+            // Set start
+            do {
+                start = { x: Math.floor(Math.random() * gridWidth), y: Math.floor(Math.random() * gridHeight) };
+            } while (field[start.y][start.x] !== 0);
+            field[start.y][start.x] = 2;
+            grid.children[start.y * gridWidth + start.x].classList.add('start');
+
+            // Set finish
+            do {
+                finish = { x: Math.floor(Math.random() * gridWidth), y: Math.floor(Math.random() * gridHeight) };
+            } while (field[finish.y][finish.x] !== 0);
+            field[finish.y][finish.x] = 3;
+            grid.children[finish.y * gridWidth + finish.x].classList.add('finish');
+
+            // Set bonus points
+            for (let i = 0; i < bonusPoints; i++) {
+                let bonus;
+                do {
+                    bonus = { x: Math.floor(Math.random() * gridWidth), y: Math.floor(Math.random() * gridHeight) };
+                } while (field[bonus.y][bonus.x] !== 0);
+                field[bonus.y][bonus.x] = 4;
+                bonuses.push(bonus);
+                grid.children[bonus.y * gridWidth + bonus.x].classList.add('bonus');
+            }
+        }
+
+        function clearField() {
+            grid.querySelectorAll('.cell').forEach(cell => {
+                cell.className = 'cell';
+            });
+            field = Array(gridHeight).fill().map(() => Array(gridWidth).fill(0));
+            start = null;
+            finish = null;
+            bonuses = [];
+        }
+
+        function solve() {
+            // Clear previous path
+            grid.querySelectorAll('.path').forEach(cell => cell.classList.remove('path'));
+
+            const prioritizeBonus = prioritizeBonusCheckbox.checked;
+            let path;
+
+            if (prioritizeBonus && bonuses.length > 0) {
+                path = findOptimalPathThroughBonuses();
+            } else {
+                path = findShortestPath(start, finish);
+            }
+
+            if (path) {
+                animatePath(path);
+            } else {
+                alert('No valid path found!');
+            }
+        }
+
+        function findOptimalPathThroughBonuses() {
+            let currentPosition = start;
+            let remainingBonuses = [...bonuses];
+            let totalPath = [];
+
+            while (remainingBonuses.length > 0) {
+                let nearestBonus = findNearestPoint(currentPosition, remainingBonuses);
+                let pathToBonus = findShortestPath(currentPosition, nearestBonus);
+                
+                if (!pathToBonus) return null; // No valid path found
+
+                totalPath = totalPath.concat(pathToBonus.slice(1)); // Exclude the starting point to avoid duplication
+                currentPosition = nearestBonus;
+                remainingBonuses = remainingBonuses.filter(b => b.x !== nearestBonus.x || b.y !== nearestBonus.y);
+            }
+
+            let finalPath = findShortestPath(currentPosition, finish);
+            if (!finalPath) return null; // No valid path found
+
+            return totalPath.concat(finalPath.slice(1)); // Exclude the starting point to avoid duplication
+        }
+
+        function findNearestPoint(start, points) {
+            let nearest = null;
+            let shortestDistance = Infinity;
+
+            for (let point of points) {
+                let distance = Math.abs(start.x - point.x) + Math.abs(start.y - point.y);
+                if (distance < shortestDistance) {
+                    shortestDistance = distance;
+                    nearest = point;
+                }
+            }
+
+            return nearest;
+        }
+
+        function findShortestPath(start, end) {
+            const queue = [[start]];
+            const visited = new Set();
+
+            while (queue.length > 0) {
+                const path = queue.shift();
+                const { x, y } = path[path.length - 1];
+
+                if (x === end.x && y === end.y) {
+                    return path;
+                }
+
+                if (!visited.has(`${x},${y}`)) {
+                    visited.add(`${x},${y}`);
+
+                    const neighbors = [
+                        { x: x + 1, y: y },
+                        { x: x - 1, y: y },
+                        { x: x, y: y + 1 },
+                        { x: x, y: y - 1 }
+                    ];
+
+                    for (let neighbor of neighbors) {
+                        if (
+                            neighbor.x >= 0 && neighbor.x < gridWidth &&
+                            neighbor.y >= 0 && neighbor.y < gridHeight &&
+                            field[neighbor.y][neighbor.x] !== 1 // Not an obstacle
+                        ) {
+                            queue.push([...path, neighbor]);
+                        }
+                    }
+                }
+            }
+
+            return null; // No path found
+        }
+
+        function animatePath(path) {
+            path.forEach((point, index) => {
+                setTimeout(() => {
+                    if (field[point.y][point.x] !== 2 && field[point.y][point.x] !== 3 && field[point.y][point.x] !== 4) {
+                        grid.children[point.y * gridWidth + point.x].classList.add('path');
+                    }
+                }, index * 100);
+            });
+        }
+
+        function startDrawing(event) {
+            isDrawing = true;
+            draw(event);
+        }
+
+        function draw(event) {
+            if (!isDrawing) return;
+            const cell = event.target;
+            const x = parseInt(cell.dataset.x);
+            const y = parseInt(cell.dataset.y);
+
+            if (currentDrawMode === 'draw-obstacle') {
+                setObstacle(cell, x, y);
+            } else if (currentDrawMode === 'draw-start') {
+                setStart(cell, x, y);
+            } else if (currentDrawMode === 'draw-finish') {
+                setFinish(cell, x, y);
+            } else if (currentDrawMode === 'draw-bonus') {
+                toggleBonus(cell, x, y);
+            }
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        function setObstacle(cell, x, y) {
+            if (field[y][x] !== 1) {
+                field[y][x] = 1;
+                cell.classList.add('obstacle');
+            }
+        }
+
+        function setStart(cell, x, y) {
+            if (start) {
+                grid.children[start.y * gridWidth + start.x].classList.remove('start');
+                field[start.y][start.x] = 0;
+            }
+            start = { x, y };
+            field[y][x] = 2;
+            cell.className = 'cell start';
+        }
+
+        function setFinish(cell, x, y) {
+            if (finish) {
+                grid.children[finish.y * gridWidth + finish.x].classList.remove('finish');
+                field[finish.y][finish.x] = 0;
+            }
+            finish = { x, y };
+            field[y][x] = 3;
+            cell.className = 'cell finish';
+        }
+
+        function toggleBonus(cell, x, y) {
+            if (field[y][x] === 4) {
+                field[y][x] = 0;
+                cell.classList.remove('bonus');
+                bonuses = bonuses.filter(b => b.x !== x || b.y !== y);
+            } else if (field[y][x] === 0) {
+                field[y][x] = 4;
+                cell.classList.add('bonus');
+                bonuses.push({ x, y });
+            }
+        }
+
+        generateBtn.addEventListener('click', createGrid);
+        clearBtn.addEventListener('click', clearField);
+        solveBtn.addEventListener('click', solve);
+
+        drawButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                drawButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                currentDrawMode = button.id;
+            });
+        });
+
+        grid.addEventListener('mousedown', startDrawing);
+        grid.addEventListener('mousemove', draw);
+        grid.addEventListener('mouseup', stopDrawing);
+        grid.addEventListener('mouseleave', stopDrawing);
+
+        createGrid(); // Initial grid creation
+    </script>
+</body>
+</html>
