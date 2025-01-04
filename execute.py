@@ -27,6 +27,7 @@ def process_and_execute(commandlist):
                 left(arg1, arg2)
             elif cid == 4:
                 right(arg1, arg2)
+                #confirm if forward, back, left and right are correctly imported
         erase()
 def boot2():
     commands = read_commands()
