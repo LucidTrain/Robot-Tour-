@@ -16,9 +16,9 @@ def process_and_execute(commandlist):
     else:
         for command in commandlist:
             print(command)
-            cid = int(command[:0])
-            arg1 = int(command[1:2])
-            arg2 = int(command[3:5])
+            cid = int(command[0])  # Assuming the first character represents the command ID
+            arg1 = int(command[1:3])  # Adjust slices based on the actual command format
+            arg2 = int(command[3:])  # Remaining part as argument 2
             if cid == 1:
                 forward(arg1, arg2)
             elif cid == 2:
