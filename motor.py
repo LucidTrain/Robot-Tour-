@@ -1,7 +1,6 @@
 from math import pi
 from machine import Pin, PWM
 import micropython
-
 import time
 micropython.alloc_emergency_exception_buf(200)
 
@@ -62,7 +61,8 @@ def sensorBinterupt():
         pulseCountB += 1
         lastPulseTimeB = currenttime
 
-def setMotorSpeed(motor: int, speed: int):
+def setMotorSpeed(motor: float, speed: float):
+    speed = int(speed)
     if motor == 1:
         pwm_ena.duty(speed)
     elif motor == 2:

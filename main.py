@@ -6,6 +6,16 @@ from execute import boot2
 import machine
 import neopixel
 import time
+def boot2_crash():
+    np = neopixel.NeoPixel(machine.Pin(48), 1)
+    for _ in range(3):  # Flash the light 3 times
+        np[0] = (128, 0, 128)  # Set to purple
+        np.write()
+        time.sleep(0.25)  # Keep it on for 0.25 seconds
+
+        np[0] = (0, 0, 0)  # Turn off
+        np.write()
+        time.sleep(0.25)  # Pause before the next flash
 def read_webpage():
     with open('index.html', 'r') as file:
         return file.read()
@@ -23,23 +33,8 @@ try:
         try:
             boot2()
         except Exception:
-            np = neopixel.NeoPixel(machine.Pin(48), 1)
             while True:
-                np[0] = (128,0,128)
-                np.write()
-                time.sleep(0.25)
-                np[0] = (0,0,0)
-                np.write()
-                np[0] = (128,0,128)
-                np.write()
-                time.sleep(0.25)
-                np[0] = (0,0,0)
-                np.write()
-                np[0] = (128,0,128)
-                np.write()
-                time.sleep(0.25)
-                np[0] = (0,0,0)
-                np.write()
+                boot2_crash()
         machine.reset()
 except Exception:
     pass
@@ -51,29 +46,14 @@ debug = True # debugging mode disables the webserver and will only process built
 #debug mode should always be false during competion
 if debug == True:
     #system test sequence
-    for i in range(10):
-        #boot 2 crash led test
-        np = neopixel.NeoPixel(machine.Pin(48), 1)
-        np[0] = (128,0,128)
-        np.write()
-        time.sleep(0.25)
-        np[0] = (0,0,0)
-        np.write()
-        np[0] = (128,0,128)
-        np.write()
-        time.sleep(0.25)
-        np[0] = (0,0,0)
-        np.write()
-        np[0] = (128,0,128)
-        np.write()
-        time.sleep(0.25)
-        np[0] = (0,0,0)
-        np.write()
+    for _ in range(3):
+        boot2_crash()
     try:
         result = boot2()
     except Exception:
         print("Self Test Failed!!!!!!")
-
+    if result == True:
+        print("Self Test Sucessful")
 app = Microdot()
 
 

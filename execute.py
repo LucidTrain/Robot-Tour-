@@ -1,4 +1,3 @@
-from imghdr import tests
 from time import sleep
 import machine
 import ujson
@@ -37,9 +36,9 @@ def boot2():
     if testseq == True:
         motor.setup()
         motor.forward(1000, 1023)#1023 is now full speed ESP32 supports 10 bit reslouition 0-1023 for PWM
-        sleep(1000)
+        sleep(1)
         motor.turn(-90, 1023)
-        sleep(1000)
+        sleep(1)
         motor.turn(180, 1023)
         return True
 
