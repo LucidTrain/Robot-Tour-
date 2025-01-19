@@ -1,8 +1,8 @@
 from math import pi
 from machine import Pin, PWM
 import micropython
-import pyb
 
+import time
 micropython.alloc_emergency_exception_buf(200)
 
 # Declare global variables
@@ -50,14 +50,14 @@ def setup():
 
 def sensorAinterupt():
     global lastPulseTimeA, pulseCountA
-    currenttime = pyb.micros()
+    currenttime = time.ticks_us()
     if currenttime - lastPulseTimeA > debounceInterval:
         pulseCountA += 1
         lastPulseTimeA = currenttime
 
 def sensorBinterupt():
     global lastPulseTimeB, pulseCountB
-    currenttime = pyb.micros()
+    currenttime = time.ticks_us()
     if currenttime - lastPulseTimeB > debounceInterval:
         pulseCountB += 1
         lastPulseTimeB = currenttime
