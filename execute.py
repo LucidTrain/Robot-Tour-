@@ -1,3 +1,4 @@
+from imghdr import tests
 import machine
 import ujson
 def read_commands():
@@ -16,6 +17,7 @@ def process_and_execute(commandlist):
     else:
         for command in commandlist:
             print(command)
+            basespeed = 200
             cid = int(command[:0])
             arg1 = int(command[1:2])
             arg2 = int(command[3:5])
@@ -29,6 +31,12 @@ def process_and_execute(commandlist):
                 right(arg1, arg2)
         erase()
 def boot2():
+    testseq = True
+    if testseq = True:
+        forward(1, 100)
+        back(1, 100)
+        left(1, 100)
+        right(1, 100)
     commands = read_commands()
     cmd1 = commands['cmd1']
     cmd2 = commands['cmd2']
