@@ -1,6 +1,8 @@
 from imghdr import tests
+from time import sleep
 import machine
 import ujson
+import motor
 def read_commands():
     with open('commands.json', 'r') as file2:
         data = ujson.load(file2)
@@ -32,11 +34,15 @@ def process_and_execute(commandlist):
         erase()
 def boot2():
     testseq = True
-    if testseq = True:
-        forward(1, 100)
-        back(1, 100)
-        left(1, 100)
-        right(1, 100)
+    if testseq == True:
+        motor.setup()
+        motor.forward(1000, 1023)#1023 is now full speed ESP32 supports 10 bit reslouition 0-1023 for PWM
+        sleep(1000)
+        motor.turn(-90, 1023)
+        sleep(1000)
+        motor.turn(180, 1023)
+        return True
+
     commands = read_commands()
     cmd1 = commands['cmd1']
     cmd2 = commands['cmd2']

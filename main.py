@@ -47,7 +47,32 @@ ap = network.WLAN(network.AP_IF)
 ap.config(essid='CheapChip', password='djjdm!334')
 ap.config(authmode=network.AUTH_WPA2_PSK)
 ap.active(True)
-
+debug = True # debugging mode disables the webserver and will only process built in commands Only use for testing motor control module
+#debug mode should always be false during competion
+if debug == True:
+    #system test sequence
+    for i in range(10):
+        #boot 2 crash led test
+        np = neopixel.NeoPixel(machine.Pin(48), 1)
+        np[0] = (128,0,128)
+        np.write()
+        time.sleep(0.25)
+        np[0] = (0,0,0)
+        np.write()
+        np[0] = (128,0,128)
+        np.write()
+        time.sleep(0.25)
+        np[0] = (0,0,0)
+        np.write()
+        np[0] = (128,0,128)
+        np.write()
+        time.sleep(0.25)
+        np[0] = (0,0,0)
+        np.write()
+    try:
+        result = boot2()
+    except Exception:
+        print("Self Test Failed!!!!!!")
 
 app = Microdot()
 

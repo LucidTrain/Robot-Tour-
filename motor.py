@@ -1,3 +1,4 @@
+from math import pi
 from machine import Pin, PWM
 import micropython
 import pyb
@@ -109,4 +110,48 @@ def stopmotor():
     in1.off()
     in2.off()
     in3.off()
+    in4.off()
+
+def turn(angle:int, baseSpeed:int):
+    lastDistanceA = 11.0 #maybe supposed to be zero?
+    lastDistanceB = 11.0
+    calibrationFactor = 0.85 # adjust to calibrate the turn
+    turnCirumfrence = wheelCircumference * pi
+    targetDistance = ((abs(angle) / 360.0)* turnCirumfrence) / 2
+    targetDistance *= calibrationFactor
+    pulseCountA = 0
+    pulseCountB = 0
+    while True:
+        distanceA = (pulseCountA / pulsesPerRevolution) * wheelCircumference
+        distanceB = (pulseCountB / pulsesPerRevolution) * wheelCircumference
+        error = distanceA - distanceB if angle > 0 else distanceB - distanceA
+        P = error * kP
+        D = (error - lastError) * kD
+        correction = P + D
+        newspeedA = baseSpeed - correction
+        newspeedB = baseSpeed + correction
+        setMotorSpeed(1, newspeedA)
+        setMotorSpeed(2, newspeedB)
+        if angle > 0:
+            in1.off()
+            in2.on()
+            in3.on()
+            in4.off()
+        else:
+            in1.on()
+            in2.off()
+            in3.off()
+            in4.on()
+        lastError = error
+        lastDistanceA = distanceA
+        lastDistanceB = distanceB
+        if distanceA >= targetDistance and distanceB >= targetDistance:
+            stopmotor()
+            break
+def backward(speed: int):
+    setMotorSpeed(1, speed)
+    setMotorSpeed(2, speed)
+    in1.on()
+    in2.off()
+    in3.on()
     in4.off()
