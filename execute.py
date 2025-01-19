@@ -12,7 +12,7 @@ def erase():
 print('Executing Commands')
 def process_and_execute(commandlist):
     runcode = commandlist[10]
-    if runcode != 38241232:
+    if runcode != 'CorrectBattery!':
         erase()
         machine.reset()
     else:

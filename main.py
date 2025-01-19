@@ -39,7 +39,7 @@ try:
 except Exception:
     pass
 ap = network.WLAN(network.AP_IF)
-ap.config(essid='CheapChip', password='djjdm!334')
+ap.config(essid='CheapChip', password='JenksSciOly!')
 ap.config(authmode=network.AUTH_WPA2_PSK)
 ap.active(True)
 debug = True # debugging mode disables the webserver and will only process built in commands Only use for testing motor control module
