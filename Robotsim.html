@@ -188,6 +188,7 @@ label {
             <button class="draw-button" id="draw-start">Set Start</button>
             <button class="draw-button" id="draw-finish">Set Finish</button>
             <button class="draw-button" id="draw-bonus">Add Bonus</button>
+            <input type="submit" class="draw-button" value="Execute Movement Commands on Robot" id="runbutton" />
         </div>
     </div>
     <div id="grid"></div>
@@ -251,6 +252,15 @@ function createGrid() {
     placeRandomPoints();
     clearCommands();
 }
+    var commandCounter = 0;
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/sovlve/';
+    var runbutton = document.getElementById('runbutton');
+    runbutton.addEventListener('click', function () {
+        document.body.appendChild(form);
+        form.submit();
+    });
 
 function generateCommand(type, angle, speed) {
     // Type: 1=forward, 2=backward, 3=left, 4=right
@@ -258,6 +268,14 @@ function generateCommand(type, angle, speed) {
     // Speed: 000-255
     const paddedAngle = String(Math.abs(angle)).padStart(2, '0');
     const paddedSpeed = String(speed).padStart(3, '0');
+
+    commandCounter++;
+    var commandelemt = document.createElement('input'); 
+    commandelemt.type = 'hidden';   
+    commandelemt.name = 'command' + commandCounter;
+    commandelemt.value = `${type}${paddedAngle}${paddedSpeed}`;
+    form.appendChild(commandelemt);
+    commandCounter++;
     return `${type}${paddedAngle}${paddedSpeed}`;
 }
 
