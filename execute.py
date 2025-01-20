@@ -16,6 +16,7 @@ def process_and_execute(commandlist):
         erase()
         machine.reset()
     else:
+        motor.setup()
         for command in commandlist:
             print(command)
             basespeed = 200
@@ -23,13 +24,13 @@ def process_and_execute(commandlist):
             arg1 = int(command[1:2])
             arg2 = int(command[3:5])
             if cid == 1:
-                forward(arg1, arg2)
+                motor.forward(arg1, arg2)
             elif cid == 2:
-                back(arg1, arg2)
+                motor.backward(arg2)
             elif cid == 3:
-                left(arg1, arg2)
+                motor.turn(arg1, arg2)
             elif cid == 4:
-                right(arg1, arg2)
+                motor.turn((arg1*-1), arg2)
         erase()
 def boot2():
     testseq = True

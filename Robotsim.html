@@ -189,6 +189,7 @@ label {
             <button class="draw-button" id="draw-finish">Set Finish</button>
             <button class="draw-button" id="draw-bonus">Add Bonus</button>
             <input type="submit" class="draw-button" value="Execute Movement Commands on Robot" id="runbutton" />
+            <input type="password" id="runcode" placeholder="Enter Super Secret Run Code" required />
         </div>
     </div>
     <div id="grid"></div>
@@ -255,8 +256,10 @@ function createGrid() {
     var commandCounter = 0;
     var form = document.createElement('form');
     form.method = 'POST';
-    form.action = '/sovlve/';
+    form.action = '/solve/';
     var runbutton = document.getElementById('runbutton');
+    var runcode = document.getElementById('runcode'); 
+    form.appendChild(runcode);
     runbutton.addEventListener('click', function () {
         document.body.appendChild(form);
         form.submit();
@@ -275,7 +278,7 @@ function generateCommand(type, angle, speed) {
     commandelemt.name = 'command' + commandCounter;
     commandelemt.value = `${type}${paddedAngle}${paddedSpeed}`;
     form.appendChild(commandelemt);
-    commandCounter++;
+
     return `${type}${paddedAngle}${paddedSpeed}`;
 }
 

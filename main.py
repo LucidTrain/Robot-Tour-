@@ -63,7 +63,7 @@ def index(request):
         data = file4.read()
    
     return Response(body=data, status_code=200, headers={'Content-Type': 'text/html'})
-@app.route('/submit', methods=['POST'])
+@app.route('/solve/', methods=['POST'])
 def handle_post(request):
     data = request.form.get('data', 'No data received')
     print(f"Received POST data: {data}")  # Log the data
