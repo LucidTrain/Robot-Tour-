@@ -2,7 +2,7 @@
 import network
 from microdot import Microdot, Response
 import ujson
-from execute import boot2
+from execute import boot2, erase
 import machine
 import neopixel
 import time
@@ -42,7 +42,7 @@ ap = network.WLAN(network.AP_IF)
 ap.config(essid='CheapChip', password='JenksSciOly!')
 ap.config(authmode=network.AUTH_WPA2_PSK)
 ap.active(True)
-debug = True # debugging mode disables the webserver and will only process built in commands Only use for testing motor control module
+debug = False # debugging mode disables the webserver and will only process built in commands Only use for testing motor control module
 #debug mode should always be false during competion
 if debug == True:
     #system test sequence
@@ -65,6 +65,18 @@ def index(request):
     return Response(body=data, status_code=200, headers={'Content-Type': 'text/html'})
 @app.route('/solve/', methods=['POST'])
 def handle_post(request):
+    print(request.form)
+    print('Begin Prasing')
+    erase()
+    datadict = {}
+    numbers = (i for i in range(200))
+    for num in numbers:
+        currentcommand = request.form.get(f"command{num}", "000000")
+        if currentcommand == "000000" and num != 0:
+            break
+        datadict[f"cmd{num}"] = request.form.get(f"command{num}", "000000")
+        print(f"Command{num} is {currentcommand}")
+    write_commands(datadict)
     data = request.form.get('data', 'No data received')
     print(f"Received POST data: {data}")  # Log the data
     return {'status': 'success', 'data': data}
