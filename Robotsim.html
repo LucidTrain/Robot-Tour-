@@ -398,8 +398,7 @@ function generatePathCommands(path) {
     for (let i = 1; i < path.length; i++) {
         const current = path[i - 1];
         const next = path[i];
-        
-      
+              
         let targetAngle;
         if (next.x > current.x) targetAngle = 90;
         else if (next.x < current.x) targetAngle = 270;
