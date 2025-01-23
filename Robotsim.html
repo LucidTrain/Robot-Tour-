@@ -61,6 +61,23 @@ h1 {
     cursor: pointer;
 }
 
+.intersection {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    background-color: transparent;
+    border: 1px solid #000; /* Make the intersections visible */
+    z-index: 10;
+}
+
+.line {
+    position: absolute;
+    background-color: #333; /* Line color */
+    z-index: 5;
+    width: 1px; /* Thinner line */
+}
+
+
 .cell:hover {
     transform: scale(1.1);
     box-shadow: 0 0 5px rgba(0,0,0,0.2);
@@ -152,11 +169,11 @@ label {
     <div id="controls">
         <label>
             Grid Width:
-            <input type="number" id="grid-width" min="5" value="10">
+            <input type="number" id="grid-width" min="5" value="20">
         </label>
         <label>
             Grid Height:
-            <input type="number" id="grid-height" min="5" value="10">
+            <input type="number" id="grid-height" min="5" value="25">
         </label>
         <label>
             Obstacle Density (%):
@@ -241,6 +258,13 @@ function createGrid() {
             cell.classList.add('cell');
             cell.dataset.x = x;
             cell.dataset.y = y;
+            grid.appendChild(cell);
+            
+            // Add highlighted class for every 5th cell in both directions
+            if (x % 5 === 0) cell.style.borderLeft = '2px solid #000';
+            if (y % 5 === 0) cell.style.borderTop = '2px solid #000';
+
+            // Add cell to the grid
             grid.appendChild(cell);
             
             if (Math.random() * 100 < obstacleDensity) {
@@ -576,6 +600,47 @@ function toggleBonus(cell, x, y) {
 generateBtn.addEventListener('click', createGrid);
 clearBtn.addEventListener('click', clearField);
 solveBtn.addEventListener('click', solve);
+
+function drawLine(start, end) {
+    const startX = parseInt(start.style.left);
+    const startY = parseInt(start.style.top);
+    const endX = parseInt(end.style.left);
+    const endY = parseInt(end.style.top);
+
+    const line = document.createElement('div');
+    line.classList.add('line');
+
+    if (startX === endX) {
+        // Vertical line
+        line.style.left = `${startX + 2}px`; // Adjust for thinner line
+        line.style.top = `${Math.min(startY, endY) + 2}px`;
+        line.style.width = '1px';
+        line.style.height = `${Math.abs(endY - startY) + 2}px`;
+
+        // Mark cells as obstacles
+        const y1 = Math.min(startY, endY) / 30;
+        const y2 = Math.max(startY, endY) / 30;
+        for (let y = y1; y < y2; y++) {
+            field[y][startX / 30] = 1;
+        }
+    } else if (startY === endY) {
+        // Horizontal line
+        line.style.left = `${Math.min(startX, endX) + 2}px`;
+        line.style.top = `${startY + 2}px`; // Adjust for thinner line
+        line.style.width = `${Math.abs(endX - startX) + 2}px`;
+        line.style.height = '1px';
+
+        // Mark cells as obstacles
+        const x1 = Math.min(startX, endX) / 30;
+        const x2 = Math.max(startX, endX) / 30;
+        for (let x = x1; x < x2; x++) {
+            field[startY / 30][x] = 1;
+        }
+    }
+
+    grid.appendChild(line);
+}
+
 
 drawButtons.forEach(button => {
     button.addEventListener('click', () => {
