@@ -409,7 +409,8 @@ function generatePathCommands(path) {
         else if (next.x < current.x) targetAngle = 270;
         else if (next.y < current.y) targetAngle = 0;
         else if (next.y > current.y) targetAngle = 180;
-/**/        
+        
+      
    
         const rotationCommands = getRotationCommands(currentDirection, targetAngle);
         rotationCommands.forEach(command => {
