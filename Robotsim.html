@@ -392,33 +392,40 @@ function solve() {
 }
 
 function generatePathCommands(path) {
+
+    commandCounter = 0;
+    clearCommands();
+
+
+    currentDirection = 0; 
+
     for (let i = 1; i < path.length; i++) {
         const current = path[i - 1];
         const next = path[i];
-        const commands = getMovementCommands(current, next);
         
-        commands.forEach(command => {
+      
+        let targetAngle;
+        if (next.x > current.x) targetAngle = 90;
+        else if (next.x < current.x) targetAngle = 270;
+        else if (next.y < current.y) targetAngle = 0;
+        else if (next.y > current.y) targetAngle = 180;
+        
+   
+        const rotationCommands = getRotationCommands(currentDirection, targetAngle);
+        rotationCommands.forEach(command => {
             const type = command[0];
             const angle = parseInt(command.substr(1, 2));
             const speed = parseInt(command.substr(3));
             
-            let description;
-            switch (type) {
-                case '1':
-                    description = `Move forward at speed ${speed}`;
-                    break;
-                case '2':
-                    description = `Move backward at speed ${speed}`;
-                    break;
-                case '3':
-                    description = `Turn left ${angle}° at speed ${speed}`;
-                    break;
-                case '4':
-                    description = `Turn right ${angle}° at speed ${speed}`;
-                    break;
-            }
-            addCommand(command, description);
+            addCommand(command, `Turn ${type === '3' ? 'left' : 'right'} ${angle}° at speed ${speed}`);
         });
+        
+      
+        const moveCommand = generateCommand(1, 1, movementSpeedInput.value);
+        addCommand(moveCommand, `Move forward at speed ${movementSpeedInput.value}`);
+        
+        
+        currentDirection = targetAngle;
     }
 }
 
