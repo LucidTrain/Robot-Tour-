@@ -4,29 +4,24 @@
 #include <WiFiUDP.h>
 #include <WebServer.h>
 #include <Wire.h>
-#include "OTA.h"
-#include "WifiModule.h"
-#include "SDMMC.h"
-#include "udpModule.h"
-#include "globals.h"
 #include "esp32-hal-timer.h"
-
+#include "esp32-hal-ledc.h"
 const char* ap_ssid = "JenksScienceOlympia";
 const char* ap_password = "12345678";
 
 // Motor Pins
-#define ENA 5 // Enable pin for Motor A
-#define IN1 6 // Motor A input 1
-#define IN2 7 // Motor A input 2
-#define ENB 8 // Enable pin for Motor B
-#define IN3 9 // Motor B input 1
-#define IN4 10 // Motor B input 2
+#define ENA 8 // Enable pin for Motor A
+#define IN1 18 // Motor A input 1
+#define IN2 17 // Motor A input 2
+#define ENB 6 // Enable pin for Motor B
+#define IN3 15 // Motor B input 1
+#define IN4 7 // Motor B input 2
 #define debug1 1
 #define debug2 2
 
 // Opto sensor pins
-#define SENSOR_A 3 // Opto sensor for Motor A
-#define SENSOR_B 4 // Opto sensor for Motor B
+#define SENSOR_A 4 // Opto sensor for Motor A
+#define SENSOR_B 5 // Opto sensor for Motor B
 
 
 // Variables
@@ -44,11 +39,7 @@ volatile unsigned long lastPulseTimeB = 0;
 unsigned long debounceInterval = 200; // Microseconds
 
 //----[UDP Log]-----
-WiFiUDP Udp;
-const char* remoteIP = "192.168.4.32"; // Replace with the IP of the computer you want to send data to
-unsigned int remotePort = 4411;     // Port on the remote device to send to
 
-void udpLog(String msg);
 // Function Declarations
 void pulseHandlerA();
 void pulseHandlerB();
@@ -102,25 +93,12 @@ void setup()
   delay(2000);
   
   // Set up the Access Point
-  WiFi.softAP(ap_ssid, ap_password);
-  Serial.println("Access Point started");
-  Serial.print("AP IP Address: ");
-  Serial.println(WiFi.softAPIP());
-
-  wifiModule = new WiFiModule("PerkinsN", "123456789a");
-  wifiModule->begin();
-
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-
-  // Start OTA task
-  setupOTA("esp32-s3-zero");
-  startOTATask();
+ 
   
 
   //----- Setup Robot Motor ----------------
   Serial.begin(115200);
-  udpLog("Starting program...");
+
     // Set motor pins as outputs
     pinMode(ENA, OUTPUT);
     pinMode(IN1, OUTPUT);
@@ -136,10 +114,10 @@ void setup()
     pinMode(SENSOR_B, INPUT_PULLUP);
 
     // Configure PWM channels
-    ledcSetup(0, 5000, 8); // Channel 0, 5 kHz, 8-bit resolution for Motor A
-    ledcAttachPin(ENA, 0);
-    ledcSetup(1, 5000, 8); // Channel 1, 5 kHz, 8-bit resolution for Motor B
-    ledcAttachPin(ENB, 1);
+
+    ledcAttach(ENA, 5000, 8);
+  
+    ledcAttach(ENB, 5000, 8);
 
     // Attach interrupt to opto sensors
     attachInterrupt(digitalPinToInterrupt(SENSOR_A), pulseHandlerA, CHANGE);
@@ -159,13 +137,8 @@ void loop()
   {
     pulseCountA = 0;
     pulseCountB = 0;
-//    driveForwardPID(61.26, 210);
-    String tstr = String("Angle Setting: ")+ String(angle);
-    udpLog(tstr);
-    turnPID(angle, 200);
-//    driveBackward(speed);
-//    delay(2000);
-//    stopMotors();
+        driveForwardPID(61.26, 210);
+  
 #if(false)
     initMotorSpeed(200);
     delay(200);
@@ -176,8 +149,7 @@ void loop()
 //    angle+=10;
     if (angle>=100)
       angle = 10;
-    tstr = String("countA:")+String(pulseCountA)+String("  countB:")+String(pulseCountB);
-//    udpLog(tstr);
+
     delay(5000);
   }
 
@@ -186,16 +158,7 @@ void loop()
 //*********************************************************** */
 //*********************************************************** */
 //*********************************************************** */
-void udpLog(String msg)
-{
-//  return;
-  String logData = String(millis()) + " ms ->"+msg;
-  
-  Udp.beginPacket(remoteIP, remotePort);
-  Udp.write((const uint8_t*)logData.c_str(), logData.length());
-  Udp.endPacket();
 
-}
 
 //*********************************************************** */
 //*********************************************************** */
@@ -242,12 +205,7 @@ void driveForwardPID(float distance, int baseSpeed)
     setMotorSpeed(1, baseSpeed);
     setMotorSpeed(2, baseSpeed);
 //    delay(50);
-    String tstr = "============================";
-    udpLog(tstr);
-    tstr = "Starting PID forward...";
-    udpLog(tstr);
-    tstr = "============================";
-    udpLog(tstr);
+
 
     lastError = 0;
     while (true) 
@@ -287,14 +245,7 @@ void driveForwardPID(float distance, int baseSpeed)
 
         if ((distanceB!=lastDistanceB) || (distanceA!=lastDistanceA))
         {
-          tstr = String("countA:")+String(pulseCountA)+String("  countB:")+String(pulseCountB);
-          udpLog(tstr);
-
-          tstr = String("distanceA:")+String(distanceA,3)+String("  distanceB:")+String(distanceB,3);
-          udpLog(tstr);
-
-          tstr = String("error:")+String(error)+String("  speedA:")+String(speedA)+String("  speedB:")+String(speedB);
-          udpLog(tstr);
+         
         }
 
         setMotorSpeed(1, speedB);
@@ -327,12 +278,6 @@ void turnPID(float angle, int baseSpeed)
     float targetDistance = ((abs(angle) / 360.0) * turnCircumference) / 2;
     targetDistance*=calibrationFactor;
 
-    String tstr = "============================";
-    udpLog(tstr);
-    tstr = "Turn PID ... ANGLE:" + String(angle);
-    udpLog(tstr);
-    tstr = "============================";
-    udpLog(tstr);
 
     pulseCountA = 0;
     pulseCountB = 0;
@@ -369,14 +314,7 @@ void turnPID(float angle, int baseSpeed)
 
         if ((distanceB!=lastDistanceB) || (distanceA!=lastDistanceA))
         {
-          tstr = String("countA:")+String(pulseCountA)+String("  countB:")+String(pulseCountB);
-          udpLog(tstr);
-
-          tstr = String("distanceA:")+String(distanceA,3)+String("  distanceB:")+String(distanceB,3);
-          udpLog(tstr);
-
-          tstr = String("error:")+String(error)+String("  speedA:")+String(speedA)+String("  speedB:")+String(speedB);
-          udpLog(tstr);
+         
         }
 
         if (angle > 0) { // Right turn
