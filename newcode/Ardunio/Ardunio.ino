@@ -262,7 +262,7 @@ void turnPID(float angle, int baseSpeed)
 {
   pulsesPerRevolution = 6; 
     float wheelBase = 15.0; // Distance between wheels in cm (adjust for your robot)
-    float calibrationFactor = 0.87; // Fine-tune for accuracy
+    float calibrationFactor = 1.00; // Fine-tune for accuracy
 
     float turnCircumference = wheelBase * 3.14159; // Correct turn calculation
     float targetDistance = (abs(angle) / 360.0) * turnCircumference;
