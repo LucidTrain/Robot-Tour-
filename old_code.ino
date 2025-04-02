@@ -1,15 +1,14 @@
-
 #include <Arduino.h>
 #include <Wire.h>
 // Motor Pins
 #define ENA 6 // Enable pin for Motor A
-#define IN1 11 // Motor A input 1
-#define IN2 12 // Motor A input 2
-#define ENB 5 // Enable pin for Motor B
-#define IN3 13 // Motor B input 1
-#define IN4 10 // Motor B input 2
+#define IN1 7 // Motor A input 1
+#define IN2 5 // Motor A input 2
+#define ENB 9 // Enable pin for Motor B
+#define IN3  4// Motor B input 1
+#define IN4 8 // Motor B input 2
 #define debug1 1
-#define debug2 9
+#define debug2 10
 // Opto sensor pins
 #define SENSOR_A  3// Opto sensor for Motor A
 #define SENSOR_B 2 // Opto sensor for Motor B
@@ -28,8 +27,7 @@ float lastError = 0;
 volatile unsigned long lastPulseTimeA = 0;
 volatile unsigned long lastPulseTimeB = 0;
 unsigned long debounceInterval = 1200; // Microseconds
-unsigned long startTime; 
-bool timerRunning = false;
+
 //----[UDP Log]-----
 
 // Function Declarations
@@ -101,8 +99,6 @@ void setup()
     pinMode(ENB, OUTPUT);
     pinMode(IN3, OUTPUT);
     pinMode(IN4, OUTPUT);
-    pinMode(8, OUTPUT);
-    digitalWrite(8, HIGH);
     pinMode(debug1, OUTPUT);
     pinMode(debug2, OUTPUT);
 
@@ -134,12 +130,9 @@ void loop()
   //  Serial.print("SENSOR_B: ");
    // Serial.println(digitalRead(SENSOR_B));
    // delay(500);
-        //turnPID(90, 100);
-   // driveForwardPID(50, 210);
-
-    turnPID(95, 210);
-    delay(5000);
-    turnPID(-95, 200);
+        //turnPID(90, 220);
+   driveForwardPID(50, 210);
+    turnPID(-95, 255);
     delay(50000);
 
 }
@@ -161,20 +154,7 @@ void loop()
 void countPulses() 
 {
 }
-void startTimer() {
-    startTime = millis();
-    timerRunning = true;
-    Serial.println("Timer started!");
-}
 
-// Check if 5 seconds have passed
-void checkTimer() {
-    if (timerRunning && millis() - startTime >= 5000) {
-        digitalWrite(8, LOW);
-        stopMotors();  // Stop the robot when the timer expires
-        timerRunning = false;
-    }
-}
 //*********************************************************** */
 //*********************************************************** */
 //*********************************************************** */
@@ -199,7 +179,6 @@ void initMotorSpeed(int speed)
 //*********************************************************** */
 void driveForwardPID(float distance, int baseSpeed) 
 {
-   startTimer();
   pulsesPerRevolution = 18;
     float lastDistanceA = 0.0;
     float lastDistanceB = 0.0;
@@ -223,7 +202,7 @@ void driveForwardPID(float distance, int baseSpeed)
         countPulses(); // Update pulse counts from queues
 //        udpLog("------------");
     
-          checkTimer();
+
 
         float distanceA = (pulseCountA / pulsesPerRevolution) * wheelCircumference;
         distanceA = pulseCountA;
@@ -280,120 +259,9 @@ void driveForwardPID(float distance, int baseSpeed)
 //*********************************************************** */
 void turnPID(float angle, int baseSpeed) 
 {
- 
-  //pulsesPerRevolution = 6;  
- //if (angle > 0 ){
-    pulsesPerRevolution = 5;
-  //}
-    float wheelBase = 16.51; // Distance between wheels in cm (adjust for your robot)
-
-    //float calibrationFactor = 0.87; // Fine-tune for accuracy
-  float calibrationFactor = 0.9;
-if (angle > 0 ){
-  wheelBase = 16.51;
-    pulsesPerRevolution = 5;
-  //calibrationFactor = 1.95;
-}
-    float turnCircumference = wheelBase * 3.14159; // Correct turn calculation
-    float targetDistance = (abs(angle) / 360.0) * turnCircumference;
-    targetDistance *= calibrationFactor;
-
-    pulseCountA = 0;
-    pulseCountB = 0;
-
-    while (true) 
-    {
-        countPulses();
-
-        float distanceA = (pulseCountA / pulsesPerRevolution) * wheelCircumference;
-        float distanceB = (pulseCountB / pulsesPerRevolution) * wheelCircumference;
-
-        Serial.print("pulseCountA: "); Serial.println(pulseCountA);
-        Serial.print("pulseCountB: "); Serial.println(pulseCountB);
-        Serial.print("distanceA: "); Serial.println(distanceA);
-        Serial.print("distanceB: "); Serial.println(distanceB);
-        Serial.print("targetDistance: "); Serial.println(targetDistance);
-
-        if (distanceA >= (targetDistance - 0.5) && distanceB >= (targetDistance - 0.5)) 
-        {
-            stopMotors();
-            Serial.println("Stopping motors: target reached.");
-            break;
-        }
-
-        float error = (angle > 0) ? distanceA - distanceB : distanceB - distanceA;
-        float P = kP * (error-1.55);
-        if (angle < 0 ){
-          P = kP * (error-0.10);
-        }
-        float D = kD * (error - lastError);
-        int correction = P + D;
-
-
-
-        int speedA = baseSpeed - correction;
-        int speedB = baseSpeed + correction;
-
-        if (angle > 0) { // LEft Turn
-
-            digitalWrite(IN1, LOW);
-        
-            digitalWrite(IN2, HIGH);
-            digitalWrite(IN3, HIGH);
-            digitalWrite(IN4, LOW);
-            setMotorSpeed(1, speedB+15);
-            setMotorSpeed(2, speedA+15);
-        } else { // Rgiht Turn
-            digitalWrite(IN1, HIGH);
-            digitalWrite(IN2, LOW);
-            digitalWrite(IN3, LOW);
-            digitalWrite(IN4, HIGH);
-            setMotorSpeed(1, speedA+15);
-            setMotorSpeed(2, speedB+15);
-        }
-
-        lastError = error;
-    
-    }
-}
-
-
-//*********************************************************** */
-//*********************************************************** */
-//*********************************************************** */
-void driveBackward(int speed) 
-{
-    // Set both motors to drive backward
-//    digitalWrite(IN1, LOW);
-//    digitalWrite(IN2, HIGH);
-//    digitalWrite(IN3, LOW);
-//    digitalWrite(IN4, HIGH);
-
-    digitalWrite(IN1, HIGH);
-    digitalWrite(IN2, LOW);
-    digitalWrite(IN3, HIGH);
-    digitalWrite(IN4, LOW);
-
-
-    setMotorSpeed(1, speed);
-    setMotorSpeed(2, speed);
-}
-
-//*********************************************************** */
-//*********************************************************** */
-//*********************************************************** */
-void stopMotors() 
-{
-    // Stop both motors
-    digitalWrite(IN1, LOW);
-    digitalWrite(IN2, LOW);
-    digitalWrite(IN3, LOW);
-    digitalWrite(IN4, LOW);
-}
-void threesixty(float angle, int baseSpeed){
-  pulsesPerRevolution = 6*4; 
+  pulsesPerRevolution = 8; 
     float wheelBase = 15.0; // Distance between wheels in cm (adjust for your robot)
-    float calibrationFactor = 1.00; // Fine-tune for accuracy
+    float calibrationFactor = 0.87; // Fine-tune for accuracy
 
     float turnCircumference = wheelBase * 3.14159; // Correct turn calculation
     float targetDistance = (abs(angle) / 360.0) * turnCircumference;
@@ -452,6 +320,41 @@ void threesixty(float angle, int baseSpeed){
         delay(100); // Small delay for stability
     }
 }
+
+
+//*********************************************************** */
+//*********************************************************** */
+//*********************************************************** */
+void driveBackward(int speed) 
+{
+    // Set both motors to drive backward
+//    digitalWrite(IN1, LOW);
+//    digitalWrite(IN2, HIGH);
+//    digitalWrite(IN3, LOW);
+//    digitalWrite(IN4, HIGH);
+
+    digitalWrite(IN1, HIGH);
+    digitalWrite(IN2, LOW);
+    digitalWrite(IN3, HIGH);
+    digitalWrite(IN4, LOW);
+
+
+    setMotorSpeed(1, speed);
+    setMotorSpeed(2, speed);
+}
+
+//*********************************************************** */
+//*********************************************************** */
+//*********************************************************** */
+void stopMotors() 
+{
+    // Stop both motors
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, LOW);
+    digitalWrite(IN3, LOW);
+    digitalWrite(IN4, LOW);
+}
+
 
 //*********************************************************** */
 //*********************************************************** */
