@@ -3,13 +3,13 @@
 #include <Wire.h>
 // Motor Pins
 #define ENA 6 // Enable pin for Motor A
-#define IN1 11 // Motor A input 1
-#define IN2 12 // Motor A input 2
-#define ENB 5 // Enable pin for Motor B
-#define IN3 13 // Motor B input 1
-#define IN4 10 // Motor B input 2
+#define IN1 7 // Motor A input 1
+#define IN2 5 // Motor A input 2
+#define ENB 9 // Enable pin for Motor B
+#define IN3  4// Motor B input 1
+#define IN4 8 // Motor B input 2
 #define debug1 1
-#define debug2 9
+#define debug2 10
 // Opto sensor pins
 #define SENSOR_A  3// Opto sensor for Motor A
 #define SENSOR_B 2 // Opto sensor for Motor B
@@ -17,6 +17,11 @@
 
 // Variables
 // Variables for motor speed and distance
+
+
+//----[UDP Log]-----
+
+// Function Declarations
 volatile unsigned long pulseCountA = 0;
 volatile unsigned long pulseCountB = 0;
 float wheelCircumference = 20.42035; // Example: in centimeters old: 20.42035
@@ -136,12 +141,20 @@ void loop()
    // delay(500);
         //turnPID(90, 100);
    // driveForwardPID(50, 210);
-
-    turnPID(95, 210);
-    delay(5000);
-    turnPID(-95, 200);
+  driveForwardPID(50, 255);
+    driveForwardPID(50, 255);
+    turnPID(-95, 210);
+     driveForwardPID(50, 255); 
+     driveForwardPID(50, 255);
+      driveForwardPID(50, 255);
+       turnPID(95, 200);
+         driveForwardPID(50, 255);
+    driveForwardPID(50, 255);
     delay(50000);
-
+   
+    delay(5000);
+  driveForwardPID(50, 255);
+delay(5000);
 }
   
 
@@ -200,7 +213,7 @@ void initMotorSpeed(int speed)
 void driveForwardPID(float distance, int baseSpeed) 
 {
    startTimer();
-  pulsesPerRevolution = 18;
+  pulsesPerRevolution = 17;
     float lastDistanceA = 0.0;
     float lastDistanceB = 0.0;
     targetDistance = distance;
@@ -283,15 +296,15 @@ void turnPID(float angle, int baseSpeed)
  
   //pulsesPerRevolution = 6;  
  //if (angle > 0 ){
-    pulsesPerRevolution = 5;
+    pulsesPerRevolution = 7;
   //}
-    float wheelBase = 16.51; // Distance between wheels in cm (adjust for your robot)
+    float wheelBase = 17; // Distance between wheels in cm (adjust for your robot)
 
     //float calibrationFactor = 0.87; // Fine-tune for accuracy
-  float calibrationFactor = 0.9;
+  float calibrationFactor = 0.80;
 if (angle > 0 ){
   wheelBase = 16.51;
-    pulsesPerRevolution = 5;
+    pulsesPerRevolution = 7;
   //calibrationFactor = 1.95;
 }
     float turnCircumference = wheelBase * 3.14159; // Correct turn calculation
@@ -322,9 +335,9 @@ if (angle > 0 ){
         }
 
         float error = (angle > 0) ? distanceA - distanceB : distanceB - distanceA;
-        float P = kP * (error-1.55);
+        float P = kP * (error);
         if (angle < 0 ){
-          P = kP * (error-0.10);
+          P = kP * (error);
         }
         float D = kD * (error - lastError);
         int correction = P + D;
